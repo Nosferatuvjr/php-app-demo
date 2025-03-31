@@ -21,7 +21,7 @@ jobs:
         run: semgrep --config=auto --json > semgrep-output.json
 
       - name: Run Gitleaks
-        run: git config --global --add safe.directory . && gitleaks detect --source=. --report-format=json --report-path=gitleaks-output.json
+        run: git config --global --add safe.directory /app && gitleaks detect --source=. --report-format=json --report-path=gitleaks-output.json
 
       - name: Run PHPStan
         run: phpstan analyse --no-progress --error-format=json > phpstan-output.json || true
