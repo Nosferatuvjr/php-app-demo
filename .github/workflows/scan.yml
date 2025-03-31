@@ -1,0 +1,83 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  codeql-sast:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'php' ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Build (PHP não precisa de build real)
+        run: echo "Nada para compilar em PHP"
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  sast-tools:
+    name: Semgrep + Gitleaks + Nuclei
+    runs-on: ubuntu-latest
+    container:
+      image: nosferatuvjr/devsecops-tools:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: semgrep --config=auto --json > semgrep-output.json
+
+      - name: Run Gitleaks
+        run: gitleaks detect --source=. --report-format=json --report-path=gitleaks-output.json
+
+      - name: Run Nuclei
+        run: |
+          echo "http://localhost:8080" > targets.txt
+          nuclei -l targets.txt -json -o nuclei-output.json
+
+      - name: Upload results to DefectDojo
+        if: env.DEFECTDOJO_API_KEY != ''
+        env:
+          DEFECTDOJO_URL: https://defectdojo.seusite.com
+          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
+          ENGAGEMENT_ID: 5
+        run: |
+          function upload() {
+            scan_type=$1
+            file=$2
+            curl -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DEFECTDOJO_API_KEY" \
+              -H "Content-Type: multipart/form-data" \
+              -F "scan_type=$scan_type" \
+              -F "engagement=$ENGAGEMENT_ID" \
+              -F "file=@$file" \
+              -F "verified=true" \
+              -F "active=true" \
+              -F "minimum_severity=Low" \
+              -F "close_old_findings=true"
+          }
+
+          upload "Semgrep JSON Report" semgrep-output.json
+          upload "Gitleaks" gitleaks-output.json
+          upload "Nuclei Scan" nuclei-output.json
