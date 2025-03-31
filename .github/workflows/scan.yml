@@ -59,7 +59,7 @@ jobs:
       - name: Upload results to DefectDojo
         if: env.DEFECTDOJO_API_KEY != ''
         env:
-          DEFECTDOJO_URL: https://defectdojo.seusite.com
+          DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           ENGAGEMENT_ID: 5
         run: |
