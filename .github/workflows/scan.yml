@@ -34,9 +34,27 @@ jobs:
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
           ENGAGEMENT_ID: 5
         run: |
-          function upload() {
-            scan_type=$1
-            file=$2
+          for file in *.json; do
+            if [[ ! -s "$file" ]]; then
+              echo "⚠️  Pulando $file (vazio ou não existe)"
+              continue
+            fi
+      
+            if [[ "$file" == *semgrep* ]]; then
+              scan_type="Semgrep JSON Report"
+            elif [[ "$file" == *gitleaks* ]]; then
+              scan_type="Gitleaks Scan"
+            elif [[ "$file" == *phpstan* ]]; then
+              scan_type="PHPStan"
+            elif [[ "$file" == *nuclei* ]]; then
+              scan_type="Nuclei Scan"
+            else
+              echo "❌ Tipo de scan desconhecido para $file"
+              continue
+            fi
+      
+            echo "📤 Enviando $file como '$scan_type'..."
+      
             curl -X POST "$DEFECTDOJO_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DEFECTDOJO_API_KEY" \
               -H "Content-Type: multipart/form-data" \
@@ -47,8 +65,4 @@ jobs:
               -F "active=true" \
               -F "minimum_severity=Low" \
               -F "close_old_findings=true"
-          }
-
-          upload "Semgrep JSON Report" semgrep-output.json
-          upload "Gitleaks" gitleaks-output.json
-          upload "PHPStan" phpstan-output.json
+          done
