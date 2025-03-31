@@ -28,6 +28,7 @@ jobs:
 
       - name: Upload results to DefectDojo
         if: env.DEFECTDOJO_API_KEY != ''
+        shell: bash
         env:
           DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
           DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
